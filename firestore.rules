@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email is string;
+      allow update: if isOwner(uid)
+        && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+
+      // papers, notes, bookmarks, learningProgress, quizResults, ...
+      match /{collection}/{docId} {
+        allow read, create, update, delete: if isOwner(uid);
+      }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
